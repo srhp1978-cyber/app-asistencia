@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control de Asistencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Simple scrollbar styling for a more modern look */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      #root {
+        height: 100vh;
+      }
+      .shadow-top {
+        box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1), 0 -2px 4px -2px rgb(0 0 0 / 0.1);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react": "https://esm.sh/react@18.2.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-50 antialiased">
+    <div id="root"></div>
+    <script type="module">
+      import React, { useState, useEffect, useCallback, useRef } from 'react';
+      import ReactDOM from 'react-dom/client';
+
+      // --- From types.ts ---
+      const LogType = {
+        CheckIn: 'Ingreso',
+        CheckOut: 'Salida'
+      };
+
+      // --- From components/Icons.tsx ---
+      const LogIn = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"}),React.createElement('polyline',{points:"10 17 15 12 10 7"}),React.createElement('line',{x1:"15",y1:"12",x2:"3",y2:"12"}));
+      const LogOut = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"}),React.createElement('polyline',{points:"16 17 21 12 16 7"}),React.createElement('line',{x1:"21",y1:"12",x2:"9",y2:"12"}));
+      const MapPin = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"}),React.createElement('circle',{cx:"12",cy:"10",r:"3"}));
+      const Loader = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",className:"animate-spin",...props},React.createElement('line',{x1:"12",y1:"2",x2:"12",y2:"6"}),React.createElement('line',{x1:"12",y1:"18",x2:"12",y2:"22"}),React.createElement('line',{x1:"4.93",y1:"4.93",x2:"7.76",y2:"7.76"}),React.createElement('line',{x1:"16.24",y1:"16.24",x2:"19.07",y2:"19.07"}),React.createElement('line',{x1:"2",y1:"12",x2:"6",y2:"12"}),React.createElement('line',{x1:"18",y1:"12",x2:"22",y2:"12"}),React.createElement('line',{x1:"4.93",y1:"19.07",x2:"7.76",y2:"16.24"}),React.createElement('line',{x1:"16.24",y1:"7.76",x2:"19.07",y2:"4.93"}));
+      const AlertTriangle = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"}),React.createElement('line',{x1:"12",y1:"9",x2:"12",y2:"13"}),React.createElement('line',{x1:"12",y1:"17",x2:"12.01",y2:"17"}));
+      const Users = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}),React.createElement('circle',{cx:"9",cy:"7",r:"4"}),React.createElement('path',{d:"M22 21v-2a4 4 0 0 0-3-3.87"}),React.createElement('path',{d:"M16 3.13a4 4 0 0 1 0 7.75"}));
+      const User = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"}),React.createElement('circle',{cx:"12",cy:"7",r:"4"}));
+      const ListX = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M11 12H3"}),React.createElement('path',{d:"M16 6H3"}),React.createElement('path',{d:"M16 18H3"}),React.createElement('path',{d:"m19 10-4 4"}),React.createElement('path',{d:"m15 10 4 4"}));
+      const Link = (props) => React.createElement('svg',{xmlns:"http://www.w3.org/2000/svg",width:"24",height:"24",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",...props},React.createElement('path',{d:"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"}),React.createElement('path',{d:"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"}));
+      const CloudCheck = (props) => React.createElement('svg', {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round", ...props}, React.createElement('path',{d:"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"}), React.createElement('polyline', {points:"8 12.5 10.5 15 16 9.5"}));
+      const CloudOff = (props) => React.createElement('svg', {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round", ...props}, React.createElement('path',{d:"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"}), React.createElement('line', {x1:"15", y1:"9", x2:"9", y2:"15"}),React.createElement('line', {x1:"9", y1:"9", x2:"15", y2:"15"}));
+      const Clock = (props) => React.createElement('svg', {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round", ...props}, React.createElement('circle',{cx:"12",cy:"12",r:"10"}), React.createElement('polyline', {points:"12 6 12 12 16 14"}));
+      
+      const SyncStatus = ({ status }) => {
+        const statusMap = {
+          synced: { icon: CloudCheck, text: "Sincronizado", className: "text-green-500" },
+          pending: { icon: Clock, text: "Pendiente de Sincronización", className: "text-amber-500 animate-pulse" },
+          failed: { icon: CloudOff, text: "Error al sincronizar, se reintentará", className: "text-red-500" },
+        };
+        const { icon: Icon, text, className } = statusMap[status] || statusMap.pending;
+        return React.createElement('div', { title: text, className: `flex items-center text-xs ${className}` },
+            React.createElement(Icon, { className: "w-4 h-4 mr-1" })
+        );
+      };
+
+      // --- From components/LogEntry.tsx ---
+      const LogEntry = ({ log }) => {
+        const isCheckIn = log.type === LogType.CheckIn;
+        const date = new Date(log.timestamp);
+        const formattedDate = date.toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
+        const formattedTime = date.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',hour12:true});
+        const mapsUrl = `https://www.google.com/maps?q=${log.location.latitude},${log.location.longitude}`;
+
+        return React.createElement('div', { className: "bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-[1.02] transition-transform duration-200" },
+          React.createElement('div', { className: `flex items-start p-4 border-l-8 ${isCheckIn ? 'border-green-500' : 'border-red-500'}` },
+            React.createElement('div', { className: `p-3 rounded-full mr-4 ${isCheckIn ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}` },
+              isCheckIn ? React.createElement(LogIn, { className: "w-6 h-6" }) : React.createElement(LogOut, { className: "w-6 h-6" })
+            ),
+            React.createElement('div', { className: "flex-1" },
+              React.createElement('div', { className: "flex justify-between items-start" },
+                React.createElement('div', null,
+                  React.createElement('p', { className: `text-lg font-bold ${isCheckIn ? 'text-green-700' : 'text-red-700'}` }, log.type),
+                  React.createElement('p', { className: "text-md font-semibold text-slate-800 flex items-center mt-1" },
+                    React.createElement(User, { className: "w-4 h-4 mr-2 text-slate-500" }),
+                    log.name
+                  )
+                ),
+                React.createElement('div', { className: "text-right flex-shrink-0 ml-4" },
+                  React.createElement('p', { className: "text-sm font-semibold text-slate-800" }, formattedTime),
+                  React.createElement('p', { className: "text-xs text-slate-500" }, formattedDate)
+                )
+              ),
+              React.createElement('div', { className: "mt-3 pt-3 border-t border-slate-200" },
+                  React.createElement('div', { className: "flex justify-between items-center" },
+                      React.createElement('a', { href: mapsUrl, target: "_blank", rel: "noopener noreferrer", className: "inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors group" },
+                          React.createElement(MapPin, { className: "w-4 h-4 mr-2 text-indigo-500 group-hover:text-indigo-700" }),
+                          "Ver Ubicación"
+                      ),
+                      React.createElement(SyncStatus, { status: log.syncStatus })
+                  )
+              )
+            )
+          )
+        );
+      };
+
+      // --- From components/LogList.tsx ---
+      const LogList = ({ logs, clearLogs }) => {
+        if (logs.length === 0) {
+          return React.createElement('div',{className:"text-center text-slate-500 mt-16"},React.createElement('div',{className:"inline-block p-6 bg-slate-100 rounded-full"},React.createElement(ListX,{className:"w-16 h-16 text-slate-400"})),React.createElement('p',{className:"mt-4 text-lg"},"No hay registros de asistencia."),React.createElement('p',null,"Use los botones de abajo para marcar su ingreso o salida."));
+        }
+        return React.createElement('div',{className:"space-y-4 max-w-4xl mx-auto"},React.createElement('div',{className:"flex justify-between items-center mb-4"},React.createElement('h2',{className:"text-2xl font-semibold text-slate-700"},"Historial de Registros"),React.createElement('button',{onClick:clearLogs,className:"px-4 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-lg hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"},"Limpiar Historial")),logs.map(log => React.createElement(LogEntry,{key:log.id,log:log})));
+      };
+      
+      // --- From components/Header.tsx ---
+      const Header = () => React.createElement('header',{className:"bg-slate-800 text-white shadow-md w-full z-10"},React.createElement('div',{className:"container mx-auto px-4 md:px-6 py-4 flex items-center justify-center text-center"},React.createElement(Users,{className:"w-8 h-8 mr-3 text-indigo-400"}),React.createElement('h1',{className:"text-xl md:text-2xl font-bold tracking-tight"},"Control de Asistencia de Personal")));
+
+      // --- From components/ControlPanel.tsx ---
+      const ControlPanel = ({onLog,isLoading,error,clearError,employeeName,onNameChange,scriptUrl,onScriptUrlChange}) => {
+        const isNameMissing=!employeeName.trim();const isUrlMissing=!scriptUrl.trim();
+        return React.createElement('footer',{className:"fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-slate-200 p-4 shadow-top z-20"},React.createElement('div',{className:"max-w-4xl mx-auto"},error && React.createElement('div',{className:"bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 flex items-center justify-between",role:"alert"},React.createElement('div',{className:"flex items-center"},React.createElement(AlertTriangle,{className:"w-5 h-5 mr-2"}),React.createElement('span',{className:"block sm:inline text-sm"},error)),React.createElement('button',{onClick:clearError,className:"font-bold text-red-700 hover:text-red-900"},"×")),React.createElement('div',{className:"grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"},React.createElement('div',null,React.createElement('label',{htmlFor:"employeeName",className:"block text-sm font-medium text-slate-700 mb-1"},"Nombre del Empleado"),React.createElement('div',{className:"relative"},React.createElement('div',{className:"pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"},React.createElement(User,{className:"h-5 w-5 text-gray-400"})),React.createElement('input',{type:"text",id:"employeeName",value:employeeName,onChange:(e)=>onNameChange(e.target.value),placeholder:"Ingrese su nombre completo",className:"w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500",disabled:isLoading,'aria-required':"true"}))),React.createElement('div',null,React.createElement('label',{htmlFor:"scriptUrl",className:"block text-sm font-medium text-slate-700 mb-1"},"URL de Sincronización"),React.createElement('div',{className:"relative"},React.createElement('div',{className:"pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"},React.createElement(Link,{className:"h-5 w-5 text-gray-400"})),React.createElement('input',{type:"url",id:"scriptUrl",value:scriptUrl,onChange:(e)=>onScriptUrlChange(e.target.value),placeholder:"Pegar la URL del script de Google",className:"w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500",disabled:isLoading,'aria-required':"true"})))),React.createElement('div',{className:"grid grid-cols-1 sm:grid-cols-2 gap-4"},React.createElement('button',{onClick:()=>onLog(LogType.CheckIn),disabled:isLoading||isNameMissing||isUrlMissing,className:"flex items-center justify-center w-full px-6 py-4 text-lg font-bold text-white bg-green-600 rounded-lg shadow-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500",'aria-label':"Marcar Ingreso"},isLoading?React.createElement(Loader,{className:"w-6 h-6 mr-3"}):React.createElement(LogIn,{className:"w-6 h-6 mr-3"}),isLoading?'Localizando...':'Marcar Ingreso'),React.createElement('button',{onClick:()=>onLog(LogType.CheckOut),disabled:isLoading||isNameMissing||isUrlMissing,className:"flex items-center justify-center w-full px-6 py-4 text-lg font-bold text-white bg-red-600 rounded-lg shadow-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500",'aria-label':"Marcar Salida"},isLoading?React.createElement(Loader,{className:"w-6 h-6 mr-3"}):React.createElement(LogOut,{className:"w-6 h-6 mr-3"}),isLoading?'Localizando...':'Marcar Salida'))));
+      };
+      
+      // --- From App.tsx ---
+      const App = () => {
+        const [logs, setLogs] = useState([]);
+        const [employeeName, setEmployeeName] = useState('');
+        const [scriptUrl, setScriptUrl] = useState('');
+        const [isLoading, setIsLoading] = useState(false);
+        const [error, setError] = useState(null);
+        const isSyncing = useRef(false);
+
+        useEffect(() => {
+          try {
+            const storedLogs = localStorage.getItem('attendanceLogs');
+            if (storedLogs) setLogs(JSON.parse(storedLogs));
+            const storedName = localStorage.getItem('employeeName');
+            if (storedName) setEmployeeName(storedName);
+            const storedUrl = localStorage.getItem('googleScriptUrl');
+            if (storedUrl) setScriptUrl(storedUrl);
+          } catch (e) {
+            console.error("Failed to parse from localStorage", e);
+            setLogs([]); setEmployeeName(''); setScriptUrl('');
+          }
+        }, []);
+
+        useEffect(() => { localStorage.setItem('attendanceLogs', JSON.stringify(logs)) }, [logs]);
+        useEffect(() => { localStorage.setItem('employeeName', employeeName) }, [employeeName]);
+        useEffect(() => { localStorage.setItem('googleScriptUrl', scriptUrl) }, [scriptUrl]);
+
+        const sendToGoogleSheet = useCallback(async (logToSync) => {
+          if (!scriptUrl) return;
+          try {
+            const response = await fetch(scriptUrl, {
+              method: 'POST',
+              body: JSON.stringify(logToSync),
+            });
+            if (!response.ok) throw new Error(`El servidor respondió con un error: ${response.status}`);
+            const result = await response.json();
+            if (result.status === 'success') {
+              setLogs(prev => prev.map(l => l.id === logToSync.id ? { ...l, syncStatus: 'synced' } : l));
+            } else {
+              throw new Error(result.message || 'Error desconocido del script de Google');
+            }
+          } catch (err) {
+            console.error('Failed to send log to Google Sheet:', err);
+            setLogs(prev => prev.map(l => l.id === logToSync.id ? { ...l, syncStatus: 'failed' } : l));
+          }
+        }, [scriptUrl]);
+        
+        const syncOfflineLogs = useCallback(async () => {
+            if (isSyncing.current || !navigator.onLine || !scriptUrl) return;
+            const unsyncedLogs = logs.filter(l => l.syncStatus !== 'synced');
+            if (unsyncedLogs.length === 0) return;
+
+            isSyncing.current = true;
+            console.log(`Intentando sincronizar ${unsyncedLogs.length} registros pendientes...`);
+            await Promise.all(unsyncedLogs.map(log => sendToGoogleSheet(log)));
+            isSyncing.current = false;
+        }, [logs, scriptUrl, sendToGoogleSheet]);
+
+        useEffect(() => {
+            syncOfflineLogs(); // Sync on initial load
+            window.addEventListener('online', syncOfflineLogs);
+            const intervalId = setInterval(syncOfflineLogs, 60 * 1000); // Re-try every minute
+            return () => {
+                window.removeEventListener('online', syncOfflineLogs);
+                clearInterval(intervalId);
+            };
+        }, [syncOfflineLogs]);
+
+        const handleLog = async (type) => {
+          if (!employeeName.trim() || !scriptUrl.trim()) {
+            return setError('Por favor, complete su nombre y la URL de sincronización.');
+          }
+          setIsLoading(true);
+          setError(null);
+          try {
+            if (!navigator.geolocation) throw new Error('La geolocalización no es soportada por este navegador.');
+            const position = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }));
+            const newLog = {
+              id: crypto.randomUUID(),
+              name: employeeName.trim(),
+              type: type,
+              timestamp: Date.now(),
+              location: { latitude: position.coords.latitude, longitude: position.coords.longitude },
+              syncStatus: 'pending',
+            };
+            setLogs(prevLogs => [newLog, ...prevLogs]);
+            await sendToGoogleSheet(newLog);
+          } catch (err) {
+            let message = err.message || 'Un error inesperado ocurrió.';
+            if (err.code === 1) message = 'Permiso de geolocalización denegado.';
+            if (err.code === 2) message = 'La información de ubicación no está disponible.';
+            if (err.code === 3) message = 'La solicitud para obtener la ubicación ha caducado.';
+            setError(message);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        const clearLogs = () => {
+          if(window.confirm('¿Está seguro de que desea borrar el historial local? Esta acción no afecta los datos ya sincronizados.')) {
+              setLogs([]);
+          }
+        };
+
+        return React.createElement('div',{className:"flex flex-col h-full font-sans"},React.createElement(Header,null),React.createElement('main',{className:"flex-1 overflow-y-auto p-4 md:p-6 pb-64 md:pb-68"},React.createElement(LogList,{logs:logs,clearLogs:clearLogs})),React.createElement(ControlPanel,{onLog:handleLog,isLoading:isLoading,error:error,clearError:()=>setError(null),employeeName:employeeName,onNameChange:setEmployeeName,scriptUrl:scriptUrl,onScriptUrlChange:setScriptUrl}));
+      };
+
+      // --- From index.tsx ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(React.createElement(React.StrictMode, null, React.createElement(App, null)));
+    </script>
+  </body>
+</html>
